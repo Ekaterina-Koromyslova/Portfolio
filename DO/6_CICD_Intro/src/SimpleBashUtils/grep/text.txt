@@ -1,0 +1,4 @@
+hello world
+Pattern Here
+Another line with Pattern
+A line without the keyword

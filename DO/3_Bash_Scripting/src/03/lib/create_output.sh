@@ -1,0 +1,18 @@
+#!/usr/bin/bash
+
+print_colored_line "HOSTNAME" "$HOSTNAME"
+print_colored_line "TIMEZONE" "$TIMEZONE"
+print_colored_line "USER" "$USER"
+print_colored_line "OS" "$OS"
+print_colored_line "DATE" "$DATE"
+print_colored_line "UPTIME" "$UPTIME"
+print_colored_line "UPTIME_SEC" "$UPTIME_SEC"
+print_colored_line "IP" "$IP"
+print_colored_line "MASK" "$MASK"
+print_colored_line "GATEWAY" "$GATEWAY"
+print_colored_line "RAM_TOTAL" "$RAM_TOTAL"
+print_colored_line "RAM_USED" "$RAM_USED"
+print_colored_line "RAM_FREE" "$RAM_FREE"
+print_colored_line "SPACE_ROOT" "$SPACE_ROOT"
+print_colored_line "SPACE_ROOT_USED" "$SPACE_ROOT_USED"
+print_colored_line "SPACE_ROOT_FREE" "$SPACE_ROOT_FREE"

@@ -1,0 +1,18 @@
+#!/usr/bin/bash
+
+HOSTNAME="$(hostname)"
+TIMEZONE="$(get_timezone_name) $(timezone_utc_offset)"
+USER="$(whoami)"
+OS="$(source /etc/os-release; echo "$PRETTY_NAME")"
+DATE="$(LC_TIME=C date +"%d %B %Y %H:%M:%S")"
+UPTIME="$(uptime -p)"
+UPTIME_SEC="$(awk '{print int($1)}' /proc/uptime)"
+IP="$(hostname -I | awk '{print $1}')"
+MASK="$(get_mask)"
+GATEWAY="$(ip route | awk '/default/ {print $3}')"
+RAM_TOTAL="$(get_ram_total)"
+RAM_USED="$(get_ram_used)"
+RAM_FREE="$(get_ram_free)"
+SPACE_ROOT="$(get_space_root_value size)"
+SPACE_ROOT_USED="$(get_space_root_value used)"
+SPACE_ROOT_FREE="$(get_space_root_value free)"

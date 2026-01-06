@@ -1,0 +1,82 @@
+stages: [build,style, test, deploy, notify]
+
+variables:
+  CAT_DIR: "src/SimpleBashUtils/cat"
+  GREP_DIR: "src/SimpleBashUtils/grep"
+  ART_DIR: "src/ci_artifacts"
+
+build:
+  stage: build
+  script:
+    - make -C "$CAT_DIR" clean || true
+    - make -C "$CAT_DIR" -j"$(nproc)"
+    - make -C "$GREP_DIR" clean || true
+    - make -C "$GREP_DIR" -j"$(nproc)"
+    - mkdir -p "$ART_DIR"
+    - cp "$CAT_DIR"/s21_cat "$GREP_DIR"/s21_grep "$ART_DIR"/
+    - mkdir -p ci_status && touch ci_status/build_ok
+  artifacts:
+    when: always
+    paths:
+      - "$ART_DIR/"
+      - ci_status/build_ok
+    expire_in: 30 days
+
+code_style:
+  stage: style
+  script:
+    - set -e
+    - files_cat="$(git ls-files 'src/SimpleBashUtils/cat/*.c' 'src/SimpleBashUtils/cat/*.h')"
+    - files_grep="$(git ls-files 'src/SimpleBashUtils/grep/*.c' 'src/SimpleBashUtils/grep/*.h')"
+    - 'if [ -z "$files_cat" ] || [ -z "$files_grep"]; then echo "No .c/.h files to check"; exit 0; fi'
+    - status=0
+    - 'for file in $files_cat; do echo ">>> checking $file"; clang-format -style=file -assume-filename=src/SimpleBashUtils/cat/.clang-format "$file" | diff -u "$file" - || status=1; done'
+    - 'for file in $files_grep; do echo ">>> checking $file"; clang-format -style=file -assume-filename=src/SimpleBashUtils/grep/.clang-format "$file" | diff -u "$file" - || status=1; done'
+    - 'if [ $status -ne 0 ]; then echo "clang-format: check FAILED"; echo "To auto-fix locally:"; echo "  clang-format -i $STYLE $files"; exit 1; fi'
+    - mkdir -p ci_status && touch ci_status/style_ok
+  artifacts:
+    when: always
+    paths:
+      - ci_status/style_ok
+    expire_in: 1 day
+
+integration_tests:
+  stage: test
+  script:
+    - set -e
+    - echo ">>> Running integration tests for s21_cat <<<"
+    - bash src/SimpleBashUtils/cat/tests.sh || { echo "s21_cat tests FAILED"; exit 1; }
+    - echo ">>> Running integration tests for s21_grep <<<"
+    - bash src/SimpleBashUtils/grep/test_grep.sh || { echo "s21_grep tests FAILED"; exit 1; }
+    - echo "Integration tests PASSED"
+    - mkdir -p ci_status && touch ci_status/tests_ok
+  artifacts:
+    when: always
+    paths:
+      - ci_status/tests_ok
+    expire_in: 1 day
+
+deploy:
+  stage: deploy
+  script:
+    - bash src/deploy.sh
+    - mkdir -p ci_status && touch ci_status/deploy_ok
+  when: manual
+  dependencies:
+    - build
+  artifacts:
+    when: always
+    paths:
+      - ci_status/deploy_ok
+    expire_in: 1 day
+
+notify_telegram:
+  stage: notify
+  when: always
+  script:
+    - bash src/notify_telegram.sh
+  artifacts:
+    when: always
+    paths:
+      - ci_status/
+    expire_in: 1 day
