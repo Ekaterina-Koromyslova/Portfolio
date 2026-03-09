@@ -53,11 +53,11 @@ def run_screen(controller: InputController, map_window, screen_obj) -> None:
     и handle() у переданного объекта экрана до тех пор,
     пока экран не завершит работу.
     """
-    screen_obj.draw()
-    running = True
-    while running:
+    is_running = True
+    while is_running:
+        screen_obj.draw()
         action, pressed_key_code = controller.read(map_window)
-        running = screen_obj.handle(action, pressed_key_code)
+        is_running = screen_obj.handle(action, pressed_key_code)
         screen_obj.draw()
 
 def run() -> None:

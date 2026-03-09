@@ -12,7 +12,7 @@ from src.presentation.input.keymap import (
     QUIT, MOVE_UP, MOVE_DOWN, MOVE_LEFT, MOVE_RIGHT, NOOP
 )
 from src.presentation.widgets.inventory import InventoryWidget
-from src.domain.entities.entities import Level, Player
+from src.domain.entities.entities import Level, Player, Position
 from src.presentation.adapters.level_to_view import build_view_state
 from src.domain.generation.generator import generate_next_level
 
@@ -44,7 +44,8 @@ class GameScreen:
 
         self.level = Level()
         self.player = Player()
-        generate_next_level(self.level, self.player)
+        temp_pos = Position()
+        generate_next_level(self.level, self.player, temp_pos)
 
         self.grid, self.items, self.doors, self.keys = build_view_state(self.level)
 

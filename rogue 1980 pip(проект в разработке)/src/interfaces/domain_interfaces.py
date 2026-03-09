@@ -2,10 +2,10 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 
-from dto.entities import (
+from src.dto.entities import (
     Player, Level, Monster, BattleInfo, Room, UseItemResult,
 )
-from dto.enums import Direction, ConsumableType
+from src.dto.enums import Direction, ConsumableType
 
 
 class ILevelGenerator(ABC):

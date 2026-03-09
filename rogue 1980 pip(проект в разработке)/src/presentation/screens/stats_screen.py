@@ -41,11 +41,13 @@ class StatsScreen:
         self.map_window.refresh()
         self.message_log.render(self.message_window)
 
-    def handle(self, action) -> bool:
+    def handle(self, action, pressed_key_code) -> bool:
         """
         Обрабатывает ввод пользователя.
         False - выход с экрана, иначе True.
         """
+        _ = pressed_key_code
+
         if action == QUIT:
             return False
         if action == NOOP:

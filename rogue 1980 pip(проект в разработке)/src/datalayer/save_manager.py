@@ -3,9 +3,9 @@ from __future__ import annotations
 import json
 import os
 
-from interfaces.data_interfaces import IDataService
-from dto.entities import GameState, SessionStats
-from datalayer.serializers import (
+from src.interfaces.data_interfaces import IDataService
+from src.dto.entities import GameState, SessionStats
+from src.datalayer.serializers import (
     game_state_to_dict, game_state_from_dict,
     session_stats_to_dict, session_stats_from_dict,
 )

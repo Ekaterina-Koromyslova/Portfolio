@@ -1,0 +1,8 @@
+#!/home/yuki/Desktop/AP1_Py_P01.ID_1375364-Team_TL_rankenfv.f075f8bb_e4a3_46b5-2/src/.my_env/bin/python3
+# -*- coding: utf-8 -*-
+import re
+import sys
+from pip._internal.cli.main import main
+if __name__ == '__main__':
+    sys.argv[0] = re.sub(r'(-script\.pyw|\.exe)?$', '', sys.argv[0])
+    sys.exit(main())

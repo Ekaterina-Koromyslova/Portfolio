@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 
-from dto.entities import GameState, SessionStats
+from src.dto.entities import GameState, SessionStats
 
 
 class IDataService(ABC):

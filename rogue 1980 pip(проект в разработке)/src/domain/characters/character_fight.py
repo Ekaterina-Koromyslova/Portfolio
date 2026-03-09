@@ -1,7 +1,7 @@
 import random
-from src.domain.entities.entities import Item, MonsterType, StatType, ItemType
-from domain.entities import Position, MonsterDict, Monster, ItemInRoom
-from domain.entities import Player, Room, Passage, Level, BaseParam, Entity
+from src.domain.entities.entities import MonsterType, ItemType, Directions
+from src.domain.entities.entities import Position, Monster
+from src.domain.entities.entities import Player, Level, Entity
 from dataclasses import dataclass
 
 @dataclass(frozen=True)
@@ -24,47 +24,38 @@ class Battle:
     __slots__ = ('monster', 'is_attack', 'is_finish')
     def __init__(self, monster: Monster, is_attack):
         self.monster = monster
-        self.monster.is_first_hit = True
-        self.monster.is_resting = False
         self.is_attack = is_attack
         self.is_finish = False
-        #self.is_killed = False
 
 class BattlePicture:
-    __slots__ = ('attacks_monsters', 'hit_back_monsters', 'killed_monsters',
-                 'num_attacks', 'num_hit_back', 'num_killed')
+    __slots__ = ('battles', 'killed_monsters')
     def __init__(self):
-        self.attacks_monsters = []
-        self.num_attacks = 0
-        self.hit_back_monsters = []
-        self.num_hit_back = 0
+        self.battles = []
         self.killed_monsters = []
-        self.num_killed = 0
+
+    def battle_num(self):
+        return len(self.battles)
+
+    def killed_num(self):
+        return len(self.killed_monsters)
 
     def add_battle(self, new_battle: Battle):
-        if new_battle.is_attack:
-            self.attacks_monsters.append(new_battle)
-            self.num_attacks += 1
-        else:
-            self.hit_back_monsters.append(new_battle)
-            self.num_hit_back += 1
+        #if new_battle.is_attack:
+        self.battles.append(new_battle)
 
-    def del_battle(self, new_battle: Battle):
-        if new_battle.is_finish: # and new_battle.is_killed:
-            if new_battle.is_attack:
-                if new_battle in self.attacks_monsters:
-                    self.attacks_monsters.remove(new_battle)
-                    self.num_attacks -= 1
-            else:
-                if new_battle in self.hit_back_monsters:
-                    self.hit_back_monsters.remove(new_battle)
-                    self.num_hit_back -= 1
-            if new_battle not in self.killed_monsters:
-                self.killed_monsters.append(new_battle)
-                self.num_killed += 1
+    def del_battle(self, cur_battle: Battle):
+        if cur_battle.is_finish: # and new_battle.is_killed:
 
-"""
-    @brief Функция расчета количества золота с уровня.
+            if cur_battle in self.battles:
+                self.battles.remove(cur_battle)
+
+            if cur_battle not in self.killed_monsters:
+                self.killed_monsters.append(cur_battle)
+
+"""!
+    @brief Вспомогательная функция calc_attack_result.
+    @detail Функция, вычисляющая награду игроку за убийство монстра.
+    @return -1 - если объект не монстр и количество золота в противном случае.
 """
 def calculation_loot(monster: Entity):
     if isinstance(monster, Monster):
@@ -73,12 +64,12 @@ def calculation_loot(monster: Entity):
                 monster.stats.strength * FConst.LOOT_STRENGTH_FACTOR +
                 random.randrange(20))
 
-        #base_gold = monster.stats.health // 10 + monster.stats.strength // 5
-        #coef = 1 + monster.hostility*monster.stats.agility / 100
-        #return int(coef*base_gold)
         return int(gold)
     return -1
-"""! После боя восстановить флаг вампира defender.is_first_hit = True
+"""!
+    @brief Вспомогательная функция calc_attack_result.
+    @detail Функция, вычисляющая возможность попадания.
+    @return True - если есть попадание, False - в противном случае.
 """
 def is_hit_to_goal(attacker: Entity, defender: Entity):
     if defender.type == MonsterType.VAMPIRE and defender.is_first_hit:
@@ -87,6 +78,7 @@ def is_hit_to_goal(attacker: Entity, defender: Entity):
 
     chance_to_hit = attacker.stats.agility - defender.stats.agility + 50
     chance_to_hit = max(5, min(95, chance_to_hit))
+
     if attacker.type != MonsterType.OGRE and random.randint(1,100) > chance_to_hit:
         return False
 
@@ -94,7 +86,13 @@ def is_hit_to_goal(attacker: Entity, defender: Entity):
         attacker.is_resting = True
 
     return True
-
+"""!
+    @brief Вспомогательная функция calc_attack_result.
+    @detail Функция, вычисляющая урон одного объекта по другому, на основе характеристик и эффеектов.
+        @param attacker нападающий объект класса Entity(Monster/Player);
+        @param defender объект класса Entity, получающий урон.
+    @return damage - урон (int), который был нанесен объекту, на который напали.
+"""
 def damage_calc(attacker: Entity, defender: Entity):
     damage0 = FConst.INITIAL_DAMAGE
     if attacker.type == MonsterType.PLAYER:
@@ -112,7 +110,8 @@ def damage_calc(attacker: Entity, defender: Entity):
 
     return int(damage)
 """
-    @detail Одиночный удар по персонажу.
+    @detail Одиночный удар по персонажу, учитывает состояние отдыха, если оно было True - то
+    восстанавливает на False.
     @return gold, damage. Возможны исходы: -1, damage — монстр убил игрока,
         0, damage — если оба живы(damage = 0 в случае промаха, в случае пропуска damage = -1),
         gold, damage - если выиграл игрок;
@@ -147,43 +146,217 @@ def calc_attack_result(attacker: Entity, defender: Entity):
                 return -1, damage
 
     return 0, damage
-
+"""!
+    @brief Вспомогательная функция find_nearest_monsters.
+    @detail Функция возвращает True, если указанные позиции находятся на расстоянии 1 по любому из направлений,
+    включая диагональ. 
+"""
 def is_equal_x_y(pos1: Position, pos2: Position):
     return pos1.x == pos2.x and pos1.y == pos2.y
-
+"""!
+    @brief Вспомогательная функция is_contact, find_nearest_monsters.
+    @detail Функция возвращает True, если указанные позиции находятся на расстоянии 1 по вертикали
+    или горизонтали.
+"""
 def is_gv_neighbor(pos1: Position, pos2: Position):
     return abs(pos1.x - pos2.x) + abs(pos1.y - pos2.y) == 1
-
+"""!
+    @brief Вспомогательная функция find_nearest_monsters.
+    @detail Функция возвращает True, если указанные позиции находятся на расстоянии 1 по любому из
+    направлений, включая диагональ. 
+"""
 def is_neighbor(pos1: Position, pos2: Position):
     return max(abs(pos1.x - pos2.x), abs(pos1.y - pos2.y)) == 1
-
+"""!
+    @brief Вспомогательная функция check_battles.
+    @detail Функция проверки бедет ли контакт с монстром при координате игрока, сооттветствующей pos.
+        @param pos - обеъект класса Position.
+        @param monster - объект класса Monster.
+"""
 def is_contact(pos: Position, monster: Monster):
-    return is_neighbor(pos, monster.position)
+    return is_gv_neighbor(pos, monster.position)
 
-
-
-
-
+"""!
+    @brief Функция поиска монстров, которые могут и ударят игрока.
+    @detail Учитываются только живые монстры, находящиеся на расстоянии удара. Все монстры, кроме мимика
+    бьют только по горизонтали или вертикали.
+        @param player объект класса Player.
+        @param level объект класса Level.
+    @return массив монстров, которые находятся на расстоянии удара по игроку
+"""
 def find_nearest_monsters(player: Player, level: Level):
     monsters = []
     for room in level.rooms:
         if room.is_visited:
             for monster in room.monsters:
-                if is_gv_neighbor(monster.position, player.position):
+                if monster.type == MonsterType.MIMIC:
+                    if monster.is_alive and is_neighbor(monster.position, player.position):
+                        monsters.append(monster)
+                        monster.is_activated = True
+
+                elif monster.is_alive and is_gv_neighbor(monster.position, player.position):
                     monsters.append(monster)
 
     return monsters
 
+"""!
+    @brief Вспомогательная функция check_player_attack и check_battles.
+    @detail Возвращает ссылку на монстра, если битва с его участием уже есть в battle_picture, в противном случае
+    возвращается None.
+        @param monster объект класса Monster;
+        @param battle_picture объект класса BattlePicture.
+    @return Monster/None.
+"""
+def get_battle(monster: Monster, battle_picture: BattlePicture):
+    obj = None
+    for b in battle_picture.battles:
+        if b.monster == monster:
+            return b
+    return obj
+
+"""!
+    @brief Функция проверки атаки игрока.
+    @detail Проверяем список битв, которые есть и возвращаем активную, если ее еще нет, то создаем.
+        @param player объект класса Player; 
+        @param direct - выбранное направление движения; 
+        @param battle_picture объект класса BattlePicture; 
+        @param nearest_monsters - список монстров, которые приблизились на расстоянии удара;
+        @param pos_copy объекь класса Position, вводится, чтобы не плодить лишние объекты, анимающие резурсы компа;
+    @return True/False, current_battle/None.
+"""
+def check_player_attack(player: Player, direct: Directions, battle_picture: BattlePicture, nearest_monsters,
+                        pos_copy: Position):
+
+    from .character_move import move_character_by_direction
+
+    pos_copy.change_position(player.position.x, player.position.y, player.position.dx, player.position.dy)
+    move_character_by_direction(direct, pos_copy)
+
+    for m in nearest_monsters:
+        if m.is_alive and is_equal_x_y(pos_copy, m.position):
+            cur_battle = get_battle(m, battle_picture)
+            if cur_battle is None:
+                cur_battle = Battle(m, True) #будет атаковать на следующем ходе, они не убегают
+                battle_picture.add_battle(cur_battle)
+
+            return True, cur_battle
+
+    return False, None
+
+"""!
+    @brief Функция обновления битв.
+    @detail Если разорвана дистанция с вампиром, то у него обновляется щит. Статус is_active - означает,
+        что монстр может быть включен в список атакующих монстров.
+    @param player объект класса Player; 
+    @param battle_picture объект BattlePicture;  
+    @param nearest_monsters - массив монстров, которые смогут и будут атаковать игрока на своем ходу.
+"""
+def check_battles(player: Player, battle_picture: BattlePicture,  nearest_monsters):
+
+    for monster in nearest_monsters:
+        if get_battle(monster, battle_picture) is None:
+            battle_picture.add_battle(Battle(monster, True))
+
+    for battle in battle_picture.battles:
+        if battle.monster.is_alive:
+            if battle.monster in nearest_monsters:
+                battle.is_attack = True
+            else:
+                # монстр далеко для атаки, и его считать в ударе не надо
+                battle.is_attack = False
+                # если вампира один раз ударили, то сняли щит, но при отходе он восстанавливается
+                if battle.monster.type == MonsterType.VAMPIRE:
+                    if not is_contact(player.position, battle.monster):
+                        battle.monster.is_first_hit = True
+
+"""!
+    @brief Описание процесса атаки.
+    @detail Если gold = 0, значит был нанесен урон.
+    @param player - объект класса Player;
+    @param battle_picture объект класса BattlePicture;
+    @param battle объект класса Battle; 
+    @param turn - число типа int. 0 - ходит игрок, любое другое значение - ход монстра. Полезно для написания логов.
+    @return [gold, damage, battle.monster.type]. Если gold > 0, то монстр был убит, если gold == -1, то был убит игрок,
+        третим аргументом всегда возвращается тип монстра. Полезно для написания логов.
+"""
+def attack_procedure(player: Player, battle_picture: BattlePicture, battle: Battle, turn: int):
+    result = []
+    if turn == 0:
+        #если в списке битв есть монсты, то игрок точно атакует, т.к объект туда добавляется при атаке игрока
+        if battle is not None:
+            gold, damage = calc_attack_result(player, battle.monster)
+            result.append([gold, damage, battle.monster.type])
+
+            if gold > 0:
+                battle.is_finish = True
+                battle.monster.is_alive = False
+                battle_picture.del_battle(battle)
+    else:
+        if battle_picture.battles:
+            for b in battle_picture.battles:
+                if b.is_attack and not b.is_finish:
+                    gold, damage = calc_attack_result(b.monster, player)
+                    result.append([gold, damage, b.monster.type])
+                    if gold == -1:
+                        #игрока убили
+                        player.is_alive = False
+                        return result
+
+    return result
+"""!
+    @brief Функция очистки
+    @detail Удаляет убитых монстров из комнат, чтобы не делать лишнюю работу
+"""
+def remove_dead_monsters(level: Level):
+    for room in level.rooms:
+        # не иохраняем его для прорисовки трупов, это нам не надо
+        room.monsters = [m for m in room.monsters if m.is_alive]
+
+# Для работы в мейне:
+#def main():
+#    # 1. Инициализация
+#    player = Player()
+#    battle_picture = BattlePicture()
+#    temp_pos = Position()
+
+#   # 2. Игровой цикл
+#    while True:
+#       res = []
+#        # А. Ввод игрока (direction)
+#        # Б. Логика боя
+#         nearest_monsters = find_nearest_monsters
+#         is_hit, current_battle = check_player_attack(player, battle_picture, direction, nearest_monsters, temp_pos)
+#        # Ищем битву в списке битв, которой соответствует ввод игрока
+#        if current_battle == None:
+#           проверка на движение - и далее перемещение
+#        # добавение комнаты в посещенные, не надо деактивировать после выхода, иначе
+#        # монстры будут замирать после выхода из комнаты
+#        room_idx = get_room_number(target_pos, level)
+#        if room_idx != -1:  # пока логика запирания не реализована
+#           level.rooms[room_idx].is_visited = True
+#           обработка других нажатий кроме движения
+#        ПРоверяем что нажимали функции перемещения и тогда двигаем монстров:
+#        all_monsters_moving(player, level, temp_pos, nearest_monsters)
+#         nearest_monsters = find_nearest_monsters
+#        check_battles(player, battle_picture, nearest_monsters)
+#        # атакует игрок
+#        results = attack_procedure(player, battle_picture, current_battle, 0)
+#        res.extend(results)
+#        # атакуют монстры
+#        results = attack_procedure(player, battle_picture, current_battle, 1)
+#        # удаляем убитых монстров, чтобы заново их не проверять
+#        res.extend(results)
+#        remove_dead_monsters(level)
+#        # Г. Отрисовка
+#        render_all(player, level, res)
 
 
 
 
 
-            
 
-#def find_monster_to_attack(player: Player, level: Level):
-#    for
 
+"""
 def attack_procedure(player: Player, battle_picture: BattlePicture, choose_buttle: Battle):
 
     result = []
@@ -211,7 +384,7 @@ def attack_procedure(player: Player, battle_picture: BattlePicture, choose_buttl
     #            return result
 
     return result
-
+"""
 #сканируем окружение на предмет контакта, если он есть создаем битву и
 
 """
@@ -261,3 +434,32 @@ def calc_attack_result(attacker: Entity, defender: Entity):
     return 0, t_damage
 """
 
+"""
+def attack_procedure(player: Player, battle_picture: BattlePicture, choose_buttle: Battle):
+
+    result = []
+    if  battle_picture.attacks_monsters:
+        for battle in battle_picture.attacks_monsters:
+            if battle.is_attack and not battle.is_finish:
+                gold, damage = calc_attack_result(battle.monster, player)
+                result.append([gold, damage])
+                if gold == -1:
+                    return result
+
+    if choose_buttle and (choose_buttle in battle_picture.attacks_monsters or choose_buttle in
+                          battle_picture. hit_back_monsters):
+        gold, damage = calc_attack_result(player, choose_buttle.monster)
+        result.append([gold, damage])
+        if gold > 0:
+            choose_buttle.is_finish = True
+            battle_picture.del_battle(choose_buttle)
+
+    #for battle in battle_picture.hit_back_monsters:
+    #    if not battle.is_finish:
+    #        gold, damage = calc_attack_result(battle.monster, player)
+    #        result.append([gold, damage])
+    #        if gold == -1:
+    #            return result
+
+    return result
+"""

@@ -1,4 +1,4 @@
-from dto.enums import GameScene
+from src.dto.enums import GameScene
 
 
 class SceneManager:

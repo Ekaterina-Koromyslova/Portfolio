@@ -1,18 +1,18 @@
 from __future__ import annotations
 
-from dto.entities import (
+from src.dto.entities import (
     Player, Level, BattleInfo, MapVisibility, GameState, SessionStats,
 )
-from dto.enums import GameAction, GameScene, ConsumableType
+from src.dto.enums import GameAction, GameScene, ConsumableType
 from interfaces.domain_interfaces import (
     ILevelGenerator, IMovementService, ICombatService, IConsumableService,
 )
-from interfaces.presentation_interfaces import (
+from src.interfaces.presentation_interfaces import (
     IPresentation, IMapRenderer, IScreenRenderer,
 )
-from interfaces.data_interfaces import IDataService
-from controller.input_handler import map_key_to_action, ACTION_TO_DIRECTION
-from controller.scene_manager import SceneManager
+from src.interfaces.data_interfaces import IDataService
+from src.controller.input_handler import map_key_to_action, ACTION_TO_DIRECTION
+from src.controller.scene_manager import SceneManager
 
 TOTAL_LEVELS = 21
 

@@ -1,4 +1,4 @@
-from dto.enums import GameAction, Direction
+from src.dto.enums import GameAction, Direction
 
 _KEY_MAP: dict[int, GameAction] = {
     ord('w'): GameAction.MOVE_UP,

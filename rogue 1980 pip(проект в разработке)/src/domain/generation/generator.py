@@ -5,12 +5,13 @@ import random
 #if src_path not in sys.path:
 #    sys.path.insert(0, src_path)
 
-from domain.entities import Item, MonsterType, StatType, ItemType
-from domain.entities import Position, MonsterDict, Monster, ItemInRoom
-from domain.entities import Player, Room, Passage, Level, BaseParam, Const
-from domain.characters import simple_pattern
-from domain.characters import pattern_ogr
-from domain.characters import pattern_ghost
+from src.domain.entities.entities import Item, MonsterType, StatType, ItemType
+from src.domain.entities.entities import Position, MonsterDict, Monster, ItemInRoom
+from src.domain.entities.entities import Player, Room, Passage, Level
+from src.domain.entities.test import BaseParam, Const
+#from domain.characters import simple_pattern
+#from domain.characters import pattern_ogr
+#from domain.characters import pattern_ghost
 """!
     @brief экземпляр класса ребро (Edge).
     @detail Это внутренний класс, он не нужен вне этого блока.
@@ -109,12 +110,12 @@ def find_and_fill_exit_and_entr(min_tree: list):
     @brief вспомогательная функция для generate_passages.
     @detail проверяет, нaходится ли точка на границе комнаты и является дверью.
 """
-def check_is_the_door(p: Position, room: Room, passage: Passage, is_init: bool):
+def find_the_door(p: Position, room: Room, passage: Passage, is_init: bool):
     pos = room.position
 
     #координата в блоках, ровно на стене
-    on_v_wall = (p.x == pos.x or p.x == pos.x + pos.dx) and (pos.y < p.y < pos.y + pos.dy)
-    on_h_wall = (p.y == pos.y or p.y == pos.y + pos.dy) and (pos.x < p.x < pos.x + pos.dx)
+    on_v_wall = (p.x == pos.x or p.x == pos.x + pos.dx - 1) and (pos.y < p.y < pos.y + pos.dy - 1)
+    on_h_wall = (p.y == pos.y or p.y == pos.y + pos.dy - 1) and (pos.x < p.x < pos.x + pos.dx - 1)
 
     if on_v_wall or on_h_wall:
         if is_init:
@@ -123,7 +124,7 @@ def check_is_the_door(p: Position, room: Room, passage: Passage, is_init: bool):
             passage.change_exit(p)
 
 
-def generate_passages(level: Level):
+def generate_passages(level: Level, temp_pos: Position):
     min_tree = _Graph().get_min_tree()
     uniq_list = find_and_fill_exit_and_entr(min_tree)
     level.entrance = uniq_list[0]
@@ -133,24 +134,31 @@ def generate_passages(level: Level):
         new_passage = Passage()
         i_room = level.rooms[edge.u]
         f_room = level.rooms[edge.v]
-        c_i = (i_room.position.x + i_room.position.dx // 2, i_room.position.y + i_room.position.dy // 2)
-        c_f = (f_room.position.x + f_room.position.dx // 2, f_room.position.y + f_room.position.dy // 2)
+        c_i = [i_room.position.x + i_room.position.dx // 2, i_room.position.y + i_room.position.dy // 2]
+        c_f = [f_room.position.x + f_room.position.dx // 2, f_room.position.y + f_room.position.dy // 2]
+
+        for r in [i_room, f_room]:
+            if c_i[1] == r.position.y: c_i[1] += 1
+            if c_i[1] == r.position.y + r.position.dy - 1: c_i[1] -= 1
+
+        for r in [i_room, f_room]:
+            if c_f[0] == r.position.x: c_f[0] += 1
+            if c_f[0] == r.position.x + r.position.dx - 1: c_f[0] -= 1
+
         for x in range(min(c_i[0], c_f[0]), max(c_i[0], c_f[0]) + 1):
-            new_point = Position()
-            new_point.change_position(x, c_i[1], 1, 1)
-            new_passage.add_point(new_point)
-            check_is_the_door(new_point, i_room, new_passage, True)
-            check_is_the_door(new_point, f_room, new_passage, False)
+            temp_pos.change_position(x, c_i[1], 1, 1)
+            new_passage.add_point(temp_pos)
+            find_the_door(temp_pos, i_room, new_passage, True)
+            find_the_door(temp_pos, f_room, new_passage, False)
 
         for y in range(min(c_i[1], c_f[1]), max(c_i[1], c_f[1]) + 1):
-            if y == c_i[1]:
+            if y == c_i[1]: # убираю дубликат точки из  коридора
                 continue
 
-            new_point = Position()
-            new_point.change_position(c_f[0], y, 1, 1)
-            new_passage.add_point(new_point)
-            check_is_the_door(new_point, i_room, new_passage, True)
-            check_is_the_door(new_point, f_room, new_passage, False)
+            temp_pos.change_position(c_f[0], y, 1, 1)
+            new_passage.add_point(temp_pos)
+            find_the_door(temp_pos, i_room, new_passage, True)
+            find_the_door(temp_pos, f_room, new_passage, False)
 
         level.add_passage(new_passage)
 """!
@@ -292,33 +300,35 @@ def generate_position(room: Room):
     @param monster - экземпляр класса Monster;
     @param level_num - номер уровня.
 """
-def generate_monster_stats(monster: Monster, level_num: int):
+#def generate_monster_stats(monster: Monster, level_num: int):
+#
+#    all_types = list(MonsterDict.stats.keys())
+#    if level_num <= 3:
+#        possible_types = [m for m in all_types if m not in [MonsterType.OGRE, MonsterType.SNAKE]]
+#    else:
+#        possible_types = all_types
+#
+#    monster_type = random.choice(possible_types)
+#    percent_update = Const.PERCENTS_UPDATE_DIFFICULTY_MONSTERS * level_num/100
+#    my_inf = MonsterDict.stats[monster_type]
+#    monster.type = monster_type
+#    monster.hostility = my_inf[StatType.HOSTILITY]
+#    monster.stats.health = int(my_inf[StatType.HEALTH]*BaseParam.STATS[StatType.HEALTH]*(1 + percent_update))
+#    monster.stats.agility = int(my_inf[StatType.AGILITY]*BaseParam.STATS[StatType.AGILITY]*(1 + percent_update))
+#    monster.stats.strength = int(my_inf[StatType.STRENGTH]*BaseParam.STATS[StatType.STRENGTH]*(1 + percent_update))
 
-    all_types = list(MonsterDict.stats.keys())
-    if level_num <= 3:
-        possible_types = [m for m in all_types if m not in [MonsterType.OGRE, MonsterType.SNAKE]]
-    else:
-        possible_types = all_types
-
-    monster_type = random.choice(possible_types)
-    percent_update = Const.PERCENTS_UPDATE_DIFFICULTY_MONSTERS * level_num/100
-    my_inf = MonsterDict.stats[monster_type]
-    monster.type = monster_type
-    monster.hostility = my_inf[StatType.HOSTILITY]
-    monster.stats.health = int(my_inf[StatType.HEALTH]*BaseParam.STATS[StatType.HEALTH]*(1 + percent_update))
-    monster.stats.agility = int(my_inf[StatType.AGILITY]*BaseParam.STATS[StatType.AGILITY]*(1 + percent_update))
-    monster.stats.strength = int(my_inf[StatType.STRENGTH]*BaseParam.STATS[StatType.STRENGTH]*(1 + percent_update))
-
-    if monster_type in [MonsterType.VAMPIRE, MonsterType.ZOMBIE, MonsterType.SNAKE]:
-        monster.pattern = simple_pattern
-    elif monster_type == MonsterType.GHOST:
-        monster.pattern = pattern_ghost
-    elif monster_type == MonsterType.OGRE:
-        monster.pattern = pattern_ogr
+#    if monster_type in [MonsterType.VAMPIRE, MonsterType.ZOMBIE, MonsterType.SNAKE]:
+#        monster.pattern = simple_pattern
+#    elif monster_type == MonsterType.GHOST:
+#        monster.pattern = pattern_ghost
+#    elif monster_type == MonsterType.OGRE:
+#        monster.pattern = pattern_ogr
 """!
     @brief Функция генерации и добавления монстров в комнаты уровня
     @detail
     @param 
+"""
+
 """
 def generate_monsters(level: Level, level_num: int, entrance_num: int, temp_pos: Position):
     level.level_num = level_num
@@ -348,6 +358,8 @@ def generate_monsters(level: Level, level_num: int, entrance_num: int, temp_pos:
                 if added:
                     room_monster.change_position(temp_pos)
                     my_room.add_monster(room_monster)
+
+"""                    
 """!
     brief Функция определения верхнего порога для указанного типа параметра.
 """
@@ -443,13 +455,6 @@ def generate_key_data(item: Item, locked_room_num: int):
     #item.subtype - цвет
     item.value = locked_room_num # номер замертой двери
 
-#def generate_keys_logic(level: Level, player: Player):
-#    locked_passages = [p for p in level.pasages if p.is_locked]
-#    for passage in locked_passages:
-#        target = passage.target_room
-#        key_room_idx = passage.key_in_room
-#        generate_item(level, key_room_idx, ItemType.KEY, player, target)
-
 """!
     @brief Функция генерации расходника.
     @detail Функция генерирует экземпляр расходника типа item_type, затем случайным образом координату внутри выбранной
@@ -535,15 +540,15 @@ def clean_data(level: Level):
     level.rooms_with_key.clear()
 
 def generate_next_level(level: Level, player: Player, temp_pos: Position):
-    clean_data(level)
+    #clean_data(level)
     level.level_num += 1
     level.rooms = generate_rooms_in_level()
-    generate_passages(level)
+    generate_passages(level, temp_pos)
     generate_entrance(level)
     generate_exit_point(level)
     # надо здесь ключи добавить
     generate_consumables(level, player, temp_pos)
-    generate_monsters(level, level.level_num, level.entrance, temp_pos)
+    #generate_monsters(level, level.level_num, level.entrance, temp_pos)
     room_number = generate_player(level, player)
     level.rooms[room_number].is_visited = True
     #print(room_number)

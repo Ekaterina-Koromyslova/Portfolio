@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from dto.entities import (
+from src.dto.entities import (
     Position, Size, Rect,
     Treasure, Food, Elixir, Scroll, Weapon,
     RoomFood, RoomElixir, RoomScroll, RoomWeapon, RoomConsumables,
@@ -9,7 +9,7 @@ from dto.entities import (
     Room, Passage, Level,
     BattleInfo, MapVisibility, SessionStats, GameState,
 )
-from dto.enums import MonsterType, HostilityLevel, StatType, Direction
+from src.dto.enums import MonsterType, HostilityLevel, StatType, Direction
 
 
 # === Геометрия ===

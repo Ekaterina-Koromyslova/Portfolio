@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 
-from dto.entities import (
+from src.dto.entities import (
     Player, Level, MapVisibility, BattleInfo, SessionStats,
 )
 
